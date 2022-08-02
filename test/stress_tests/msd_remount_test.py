@@ -29,22 +29,23 @@ import sys
 #   There is no disk in the drive. Please insert a disk into
 #   drive \Device\<Harddiskx>\<rdrive>
 def disable_popup():
-    if sys.platform.startswith("win"):
-        # pylint: disable=invalid-name
-        import ctypes
-        SEM_FAILCRITICALERRORS = 1
-        GetErrorMode = \
-            ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
-        GetErrorMode.restype = ctypes.c_uint
-        GetErrorMode.argtypes = []
-        SetErrorMode = \
-            ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
-        SetErrorMode.restype = ctypes.c_uint
-        SetErrorMode.argtypes = [ctypes.c_uint]
+    if not sys.platform.startswith("win"):
+        return
+    # pylint: disable=invalid-name
+    import ctypes
+    GetErrorMode = \
+        ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
+    GetErrorMode.restype = ctypes.c_uint
+    GetErrorMode.argtypes = []
+    SetErrorMode = \
+        ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
+    SetErrorMode.restype = ctypes.c_uint
+    SetErrorMode.argtypes = [ctypes.c_uint]
 
-        err_mode = GetErrorMode()
-        err_mode |= SEM_FAILCRITICALERRORS
-        SetErrorMode(err_mode)
+    err_mode = GetErrorMode()
+    SEM_FAILCRITICALERRORS = 1
+    err_mode |= SEM_FAILCRITICALERRORS
+    SetErrorMode(err_mode)
 
 MAX_REMOUNT_TIME = 5 * 60
 should_exit = False
@@ -72,8 +73,7 @@ def get_mount_point(board_id):
     for mbed in mbed_list:
         if mbed['target_id'] == board_id:
             return mbed['mount_point']
-    else:
-        Exception("Board %s not found" % board_id)
+    Exception(f"Board {board_id} not found")
 
 
 def msd_remount_main(thread_index, board_id):
@@ -88,7 +88,7 @@ def msd_remount_main(thread_index, board_id):
             sync_print("Triggering remount for %i %s - %s at %.6f - %s" %
                        (thread_index, mount_point, board_id, _get_time(),
                         time.strftime("%H:%M:%S")))
-            file_path = mount_point + "/" + "refresh.act"
+            file_path = f"{mount_point}/refresh.act"
             with open(file_path, "wb") as _:
                 pass
 
@@ -100,7 +100,7 @@ def msd_remount_main(thread_index, board_id):
                 if time.time() - start_time > MAX_REMOUNT_TIME:
                     raise Exception("Board remount timed out")
                 time.sleep(0.1)
-            sync_print("Drive %s dismount" % mount_point)
+            sync_print(f"Drive {mount_point} dismount")
 
             # Wait for drive to come back
             mount_point = None
@@ -114,7 +114,7 @@ def msd_remount_main(thread_index, board_id):
                 time.sleep(0.1)
             assert os.path.exists(mount_point)
 
-            sync_print("Remount complete as %s" % mount_point)
+            sync_print(f"Remount complete as {mount_point}")
     except ExitException:
         pass
     except:

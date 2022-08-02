@@ -32,12 +32,10 @@ from pyocd.core.memory_map import MemoryType
 def _same(d1, d2):
     assert type(d1) is bytearray
     assert type(d2) is bytearray
-    for i in range(min(len(d1), len(d2))):
-        if d1[i] != d2[i]:
-            return False
-    if len(d1) != len(d2):
-        return False
-    return True
+    return next(
+        (False for i in range(min(len(d1), len(d2))) if d1[i] != d2[i]),
+        len(d1) == len(d2),
+    )
 
 MOCK_DIR_LIST = [
     "test",
@@ -155,7 +153,7 @@ class MassStorageTester(object):
         for retry_count in range(self.RETRY_COUNT):
             test_info = TestInfo(self.test_name)
             if retry_count > 0:
-                test_info.info('Previous attempts %s' % retry_count)
+                test_info.info(f'Previous attempts {retry_count}')
             try:
                 self._run(test_info)
             except IOError:
@@ -215,7 +213,7 @@ class MassStorageTester(object):
         programming_file_name = None
         if self._programming_file_name is not None:
             programming_file_name = \
-                self.board.get_file_path(self._programming_file_name)
+                    self.board.get_file_path(self._programming_file_name)
 
         # Write data to the file
         start = time.time()
@@ -241,13 +239,11 @@ class MassStorageTester(object):
                 load_file.write(self._programming_data)
         stop = time.time()
         diff = stop - start
-        test_info.info('Loading took %ss' % diff)
+        test_info.info(f'Loading took {diff}s')
         if self._expected_data is not None:
-            test_info.info('Programming rate %sB/s' %
-                           (len(self._expected_data) / diff))
+            test_info.info(f'Programming rate {len(self._expected_data) / diff}B/s')
         if self._programming_data is not None:
-            test_info.info('MSD transfer rate %sB/s' %
-                           (len(self._programming_data) / diff))
+            test_info.info(f'MSD transfer rate {len(self._programming_data) / diff}B/s')
 
         # Copy mock files after loading
         self._mock_file_list = []
@@ -271,10 +267,10 @@ class MassStorageTester(object):
         if failure_occured and not failure_expected:
             test_info.failure('Device reported failure: "%s"' % msg.strip())
             return
-        if failure_expected and not failure_occured:
-            test_info.failure('Failure expected but did not occur')
-            return
-        if failure_expected and failure_occured:
+        if failure_expected:
+            if not failure_occured:
+                test_info.failure('Failure expected but did not occur')
+                return
             if msg == self._expected_failure_msg and error_type == self._expected_failure_type:
                 test_info.info(
                     'Failure as expected: "%s, %s"' %
@@ -325,7 +321,7 @@ def test_mass_storage(workspace, parent_test):
     with open(hex_file, 'rb') as test_file:
         hex_file_contents = bytearray(test_file.read())
     blank_bin_contents = bytearray([0xff]) * 0x2000
-    vectors_and_pad = bin_file_contents[0:32] + blank_bin_contents
+    vectors_and_pad = bin_file_contents[:32] + blank_bin_contents
     locked_when_erased = board.get_board_id() in info.BOARD_ID_LOCKED_WHEN_ERASED
     page_erase_supported = board.get_board_id() in info.BOARD_ID_SUPPORTING_PAGE_ERASE
     bad_vector_table = target.name in info.TARGET_WITH_BAD_VECTOR_TABLE_LIST
@@ -367,7 +363,7 @@ def test_mass_storage(workspace, parent_test):
     if not bad_vector_table:
         test = MassStorageTester(board, test_info, "Load .bin smaller than sector")
         test_data_size = 0x789
-        test_data = bin_file_contents[0:0 + test_data_size]
+        test_data = bin_file_contents[:0 + test_data_size]
         test.set_programming_data(test_data, 'image.bin')
         test.set_expected_data(test_data, start)
         test.run()

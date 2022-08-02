@@ -52,7 +52,7 @@ def str_to_int(val):
     return int(val, 0)
 
 
-POWERS_OF_TWO = [2**num for num in range(0, 32)]
+POWERS_OF_TWO = [2**num for num in range(32)]
 parser = argparse.ArgumentParser(description='Configuration Creator')
 parser.add_argument("--addr", type=str_to_int, required=True, help="Address of configuration data")
 parser.add_argument("--auto_rst", type=int, required=True, choices=[0, 1], help="Auto reset configuration value")

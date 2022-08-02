@@ -50,13 +50,11 @@ def intel_hex_get_sections(intel_hex):
         if section_start is None:
             section_start = addr
             last_addr = addr
-        if addr == last_addr or addr == last_addr + 1:
-            last_addr = addr
-        else:
+        if addr not in [last_addr, last_addr + 1]:
             section_size = last_addr - section_start + 1
             section_list.append((section_start, section_size))
             section_start = addr
-            last_addr = addr
+        last_addr = addr
     if section_start is not None:
         section_size = last_addr - section_start + 1
         section_list.append((section_start, section_size))
@@ -118,7 +116,7 @@ class DLMassStorageTester(MassStorageTester):
             test_info.info("CRC not in details.txt")
             return False
         actual_crc32 = int(self.board.details_txt[self._crc_tag], 16)
-        expected_crc32 = binascii.crc32(expected_data[0:-4]) & 0xFFFFFFFF
+        expected_crc32 = binascii.crc32(expected_data[:-4]) & 0xFFFFFFFF
         test_info.info("Expected CRC: 0x%08x, actual crc: 0x%08x" %
                        (expected_crc32, actual_crc32))
         return actual_crc32 == expected_crc32
@@ -131,11 +129,13 @@ def daplink_test(workspace, parent_test):
 
     intel_hex = intelhex.IntelHex(interface.hex_path)
     section_list = intel_hex_get_sections(intel_hex)
-    assert len(section_list) == 1, ("Only 1 section supported, found %s" %
-                                    len(section_list))
+    assert (
+        len(section_list) == 1
+    ), f"Only 1 section supported, found {len(section_list)}"
+
     start, length = section_list[0]
 
-    bin_data = bytearray(intel_hex.tobinarray(start=start, size=length))    
+    bin_data = bytearray(intel_hex.tobinarray(start=start, size=length))
     sio = StringIO()
     intel_hex.tofile(sio, format='hex')
     hex_data = sio.getvalue()
@@ -167,8 +167,10 @@ def daplink_test(workspace, parent_test):
     firmware = workspace.bl_firmware
     intel_hex = intelhex.IntelHex(firmware.hex_path)
     section_list = intel_hex_get_sections(intel_hex)
-    assert len(section_list) == 1, ("Only 1 section supported, found %s" %
-                                    len(section_list))
+    assert (
+        len(section_list) == 1
+    ), f"Only 1 section supported, found {len(section_list)}"
+
     start, length = section_list[0]
 
     bin_data = bytearray(intel_hex.tobinarray(start=start, size=length))
@@ -207,8 +209,7 @@ def test_assert(workspace, parent_test):
     board.set_mode(board.MODE_IF)
 
     # Create a test assert file
-    test_info.info('Triggering assert by creating %s' %
-                   TRIGGER_ASSERT_FILE_NAME)
+    test_info.info(f'Triggering assert by creating {TRIGGER_ASSERT_FILE_NAME}')
     trigger_assert_path = board.get_file_path(TRIGGER_ASSERT_FILE_NAME)
     with open(trigger_assert_path, 'wb') as _:
         pass
@@ -255,7 +256,7 @@ def test_assert(workspace, parent_test):
 def test_file_type(file_type, board_mode, board, parent_test,
                    data_start, raw_data):
     """Test updates of a given file type using the given mode"""
-    assert file_type in ('hex', 'bin'), 'Unsupported file type %s' % file_type
+    assert file_type in ('hex', 'bin'), f'Unsupported file type {file_type}'
 
     if board_mode == board.MODE_IF:
         data_type = board.MODE_BL
@@ -264,12 +265,14 @@ def test_file_type(file_type, board_mode, board, parent_test,
     else:
         assert False
 
-    test_info = parent_test.create_subtest('%s %s filetype test' %
-                                           (file_type, data_type))
+    test_info = parent_test.create_subtest(
+        f'{file_type} {data_type} filetype test'
+    )
+
 
     def get_file_name(base='image'):
         """Get the file name to be used for loading"""
-        return base + '.' + file_type
+        return f'{base}.{file_type}'
 
     def get_file_content(addr, bin_data):
         """Get the file contents to be used for loading"""
@@ -280,7 +283,7 @@ def test_file_type(file_type, board_mode, board, parent_test,
 
     # Test partial update
     file_name = get_file_name()
-    local_data = get_file_content(data_start, raw_data[0:len(raw_data) // 2])
+    local_data = get_file_content(data_start, raw_data[:len(raw_data) // 2])
     test = DLMassStorageTester(board, test_info, "Load partial",
                                board_mode)
     test.set_programming_data(local_data, file_name)
@@ -292,8 +295,10 @@ def test_file_type(file_type, board_mode, board, parent_test,
     # If bootloader is missing then this should be indicated by a file
     if board_mode == board.MODE_IF:
         if not os.path.isfile(board.get_file_path(NEED_BL_FILE_NAME)):
-            test_info.failure("Bootloader missing but file %s not present" %
-                              NEED_BL_FILE_NAME)
+            test_info.failure(
+                f"Bootloader missing but file {NEED_BL_FILE_NAME} not present"
+            )
+
         test_info.info("Testing switch to bootloader")
         try:
             board.set_mode(board.MODE_BL)
@@ -365,8 +370,10 @@ def test_file_type(file_type, board_mode, board, parent_test,
     # If bootloader is missing then this should be indicated by a file
     if (board_mode == board.MODE_IF and
             not os.path.isfile(board.get_file_path(NEED_BL_FILE_NAME))):
-        test_info.failure("Bootloader missing but file %s not present" %
-                          NEED_BL_FILE_NAME)
+        test_info.failure(
+            f"Bootloader missing but file {NEED_BL_FILE_NAME} not present"
+        )
+
 
     # Test load with extra padding
     file_name = get_file_name()
@@ -394,8 +401,10 @@ def test_file_type(file_type, board_mode, board, parent_test,
         test.run()
         # If bootloader is missing then this should be indicated by a file
         if not os.path.isfile(board.get_file_path(NEED_BL_FILE_NAME)):
-            test_info.failure("Bootloader missing but file %s not present" %
-                              NEED_BL_FILE_NAME)
+            test_info.failure(
+                f"Bootloader missing but file {NEED_BL_FILE_NAME} not present"
+            )
+
 
         # Restore a good image
         file_name = get_file_name()

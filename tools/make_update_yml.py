@@ -120,7 +120,7 @@ def yml_object_parser(f, entry, level, tabs):
             else:
                 f.write('\n')
                 yml_object_parser(f, entry[key], level + 1, tabs);
-            
+
 
     elif type(entry) is DefaultList:     
         for target in entry:
@@ -135,9 +135,9 @@ def yml_object_parser(f, entry, level, tabs):
                     f.write('\n')
                     yml_object_parser(f, target[1], level + 1, tabs);
             else:
-                logger.error("Not expecting input type %s %s " % (type(target), str(target)))
+                logger.error(f"Not expecting input type {type(target)} {str(target)} ")
 
-    elif type(entry) is TargetList:         
+    elif type(entry) is TargetList: 
         #print "found TargetList"
         for target in entry:
             if type(target) is tuple:        
@@ -151,10 +151,10 @@ def yml_object_parser(f, entry, level, tabs):
                     f.write('\n')
                     yml_object_parser(f, target[1], level, tabs);
             else:
-                logger.error("Not expecting input type %s %s " % (type(target), str(target)))
+                logger.error(f"Not expecting input type {type(target)} {str(target)} ")
 
     elif type(entry) is InstructionList:     
-        #print "found InstructionList"        
+        #print "found InstructionList"
         for target in entry:
             if type(target) is tuple:    
                 f.write(" " * level * tabs + string_writer(target[0]) + ": |\n")
@@ -162,11 +162,11 @@ def yml_object_parser(f, entry, level, tabs):
                     for texts in target[1]:
                         f.write(" " * (level + 1) * tabs + string_writer(texts) + "\n")
                 else:
-                    logger.error("Not expecting input type %s %s " % (type(target[1]), str(target[1])))
+                    logger.error(f"Not expecting input type {type(target[1])} {str(target[1])} ")
             else:
-                logger.error("Not expecting input type %s %s " % (type(target), str(target)))
+                logger.error(f"Not expecting input type {type(target)} {str(target)} ")
     else:
-        logger.error("Not expecting input type %s %s " % (type(entry), str(entry)))
+        logger.error(f"Not expecting input type {type(entry)} {str(entry)} ")
 
 
 def make_update_yml_file(file_loc, entries, explicit_start=False, tab=2):

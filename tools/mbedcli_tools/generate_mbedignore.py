@@ -31,10 +31,10 @@ def add_list_path(input_path_list, ouput_path_dict):
             ouput_path_dict[repath]=[]
 
 def generate_mbedignore(build_dicts, topsource = 'source', filename = '.mbedignore'):
-    sources_tag = ['sources', 'includes']
     sources_list = []
     src_folder_file_dict = {}
     if 'common' in build_dicts:
+        sources_tag = ['sources', 'includes']
         #do sources first
         for tag in sources_tag:
             if tag in build_dicts['common']:
@@ -44,10 +44,7 @@ def generate_mbedignore(build_dicts, topsource = 'source', filename = '.mbedigno
                             add_list_path(build_dicts['common'][tag][srd_dir], src_folder_file_dict)
                 elif type(build_dicts['common'][tag]) is list:
                     add_list_path(build_dicts['common'][tag], src_folder_file_dict)
-    ignore_list = []
-    for file in os.listdir("./"):
-        if file != topsource:
-            ignore_list.append(file)
+    ignore_list = [file for file in os.listdir("./") if file != topsource]
     for root, dirs, files in os.walk(topsource):
         if root in src_folder_file_dict:
             if src_folder_file_dict[root] != []:
@@ -58,8 +55,7 @@ def generate_mbedignore(build_dicts, topsource = 'source', filename = '.mbedigno
         else:
             for src_folder in src_folder_file_dict:
                 if root in src_folder:
-                    for filter_file in files:
-                        ignore_list.append(os.path.join(root, filter_file))
+                    ignore_list.extend(os.path.join(root, filter_file) for filter_file in files)
                     break
             else:
                 ignore_list.append(root)

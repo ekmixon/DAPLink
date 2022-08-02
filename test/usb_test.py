@@ -48,8 +48,7 @@ def test_usb(workspace, parent_test, force=False):
     serial_number = workspace.board.get_unique_id()
     dev = _daplink_from_serial_number(serial_number)
     if dev is None:
-        test_info.failure("Could not find board with serial number %s" %
-                          serial_number)
+        test_info.failure(f"Could not find board with serial number {serial_number}")
         return
 
     # Create wrappers for and acquire exclusive access to interfaces
@@ -105,7 +104,7 @@ def main():
     dev_list = usb.core.find(find_all=True, custom_match=_daplink_match)
     for dev in dev_list:
         board_id = dev.serial_number
-        print("Testing board %s" % board_id)
+        print(f"Testing board {board_id}")
         print("----------------")
         mock_ws = mock.Mock()
         mock_ws.board = mock.Mock()
@@ -124,25 +123,26 @@ def test_cdc(test_info, cdc):
     cdc.send_break(cdc.SEND_BREAK_ON)
     cdc.send_break(cdc.SEND_BREAK_OFF)
     data = cdc.read(1024)
-    test_info.info("Serial port data: %s" % bytearray(data))
+    test_info.info(f"Serial port data: {bytearray(data)}")
     cdc.write("Hello world")
     data = cdc.read(1024)
-    test_info.info("Serial port data2: %s" % bytearray(data))
+    test_info.info(f"Serial port data2: {bytearray(data)}")
 
 
 def test_hid(test_info, hid):
     """Smoke test of the HID endpoint"""
     hid.set_idle()
     report = hid.get_descriptor(hid.DESC_TYPE_REPORT, 0)
-    test_info.info("Report descriptor: %s" % report)
+    test_info.info(f"Report descriptor: {report}")
     # Send CMSIS-DAP vendor command to get the serial number
     data = bytearray(64)
     data[0] = 0x80
     hid.set_report(data)
     resp = hid.get_report(64)
     length = resp[1]
-    test_info.info("CMSIS-DAP response: %s" %
-                   bytearray(resp[1:1 + length]).decode("utf-8"))
+    test_info.info(
+        f'CMSIS-DAP response: {bytearray(resp[1:1 + length]).decode("utf-8")}'
+    )
 
 
 def test_msd(test_info, msd):
@@ -150,7 +150,7 @@ def test_msd(test_info, msd):
 
     # Simple read
     mbr = msd.scsi_read10(0, 1)
-    test_info.info("MBR[0:16]: %s" % mbr[0:16])
+    test_info.info(f"MBR[0:16]: {mbr[:16]}")
 
     # Test FAT filesystem
     fat = Fat(msd)
@@ -395,34 +395,22 @@ def _daplink_match(dev):
         device_string = dev.product
     except ValueError:
         return False
-    if device_string is None:
-        return False
-    if device_string.find("CMSIS-DAP") < 0:
-        return False
-    return True
+    return False if device_string is None else device_string.find("CMSIS-DAP") >= 0
 
 
 def _daplink_from_serial_number(serial_number):
     """Return a usb handle to the DAPLink device with the serial number"""
     dev_list = usb.core.find(find_all=True, custom_match=_daplink_match)
-    for dev in dev_list:
-        if dev.serial_number == serial_number:
-            return dev
-    return None
+    return next(
+        (dev for dev in dev_list if dev.serial_number == serial_number), None
+    )
 
 
 def _platform_supports_usb_test():
     """Return True if this platform supports USB testing, False otherwise"""
     if os.name != "posix":
         return False
-    if not hasattr(os, 'uname'):
-        if False:
-            # Hack to supress warnings for uname not existing
-            os.uname = lambda: [None]
-        return False
-    if os.uname()[0] == "Darwin":
-        return False
-    return True
+    return os.uname()[0] != "Darwin" if hasattr(os, 'uname') else False
 
 
 def _set_usb_test_mode(hid, enabled):

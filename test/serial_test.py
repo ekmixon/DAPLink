@@ -28,10 +28,8 @@ ERROR_TIMEOUT_SECONDS = 10.0
 
 
 def _same(d1, d2):
-    #Do a string or bytearray compare 
-    if d1 != d2:
-        return False
-    return True
+    #Do a string or bytearray compare
+    return d1 == d2
 
 # http://digital.ni.com/public.nsf/allkb/D37754FFA24F7C3F86256706005B9BE7
 standard_baud = [
@@ -99,7 +97,7 @@ class SerialTester(object):
         expected_resp = "{init}"
         resp = self.read(len(expected_resp))
         if not _same(resp.decode(), expected_resp):
-            test_info.failure("Fail on init: %s" % resp)
+            test_info.failure(f"Fail on init: {resp}")
             return False
 
         # Change baudrate to that of the first test
@@ -107,7 +105,7 @@ class SerialTester(object):
         self.write(command.encode())
         resp = self.read(len(command))
         if not _same(resp.decode(), command):
-            test_info.failure("Fail on baud command: %s" % resp)
+            test_info.failure(f"Fail on baud command: {resp}")
             return False
 
         # Update baud of local serial port
@@ -118,7 +116,7 @@ class SerialTester(object):
         expected_resp = "{change}"
         resp = self.read(len(expected_resp))
         if not _same(resp.decode(), expected_resp):
-            test_info.failure("Fail on baud change %s" % resp)
+            test_info.failure(f"Fail on baud change {resp}")
             return False
 
         # Set default timeout
@@ -176,7 +174,7 @@ def test_serial(workspace, parent_test):
     test_info = parent_test.create_subtest("Serial test")
     board = workspace.board
     port = board.get_serial_port()
-    test_info.info("Testing serial port %s" % port)
+    test_info.info(f"Testing serial port {port}")
 
     # Note: OSX sends a break command when a serial port is closed.
     # To avoid problems while testing keep the serial port open the
@@ -187,7 +185,7 @@ def test_serial(workspace, parent_test):
 
         # Generate a 4KB block of dummy data
         # and test supported baud rates
-        test_data = [i for i in range(0, 256)] * 4 * 4
+        test_data = list(range(256)) * 4 * 4
         test_data = bytearray(test_data)
         for baud in standard_baud:
 
@@ -203,7 +201,7 @@ def test_serial(workspace, parent_test):
             if _same(test_data, resp):
                 test_info.info("Pass")
             else:
-                test_info.failure("Fail on baud %s" % baud)
+                test_info.failure(f"Fail on baud {baud}")
 
         # Timing stress test - send data at critical points
         # in time like right as the transmitter is turned off
@@ -213,7 +211,7 @@ def test_serial(workspace, parent_test):
         # 2. Wait until 1 byte is read back
         # 3. Write 1 byte
         # 4. Read back all data
-        test_data = [i for i in range(0, 256)] * 4 * 4
+        test_data = list(range(256)) * 4 * 4
         test_data = bytearray(test_data)
         for baud in timing_test_baud:
 
@@ -225,29 +223,28 @@ def test_serial(workspace, parent_test):
 
             test_pass = True
             for data_size in range(1, 10):
-                data = test_data[0:data_size + 1]
-                for _ in range(0, 1000):
+                data = test_data[:data_size + 1]
+                for _ in range(1000):
                     resp = bytearray()
 
-                    sp.write(data[0:data_size])
+                    sp.write(data[:data_size])
                     resp += sp.read(1)
                     sp.write(data[-1:])
                     resp += sp.read(data_size)
                     sp.flush()
                     if not _same(data, resp):
                         test_pass = False
-                        test_info.info("fail size - %s" % data_size)
+                        test_info.info(f"fail size - {data_size}")
                         break
 
             if test_pass:
                 test_info.info("Pass")
             else:
-                test_info.failure("Fail on timing test with baud %s"
-                                  % baud)
+                test_info.failure(f"Fail on timing test with baud {baud}")
 
         # Setting change smoke test - reconfigure settings while
         # in the middle of a transfer and verify nothing bad
-        test_data = [i for i in range(0, 128)]
+        test_data = list(range(128))
         test_data = bytearray(test_data)
         sp.new_session_with_baud(115200, test_info)
         sp.set_read_timeout(0)
@@ -266,7 +263,7 @@ def test_serial(workspace, parent_test):
 
         # Generate a 8 KB block of dummy data
         # and test a large block transfer
-        test_data = [i for i in range(0, 256)] * 4 * 8
+        test_data = list(range(256)) * 4 * 8
         test_data = bytearray(test_data)
         sp.new_session_with_baud(115200, test_info)
 

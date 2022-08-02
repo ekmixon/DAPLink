@@ -51,9 +51,6 @@ class TargetBundle(object):
                     name_to_target[base_name].set_bin_path(path)
                 elif extension == '.hex':
                     name_to_target[base_name].set_hex_path(path)
-                else:
-                    # Unsupported file type
-                    pass
             else:
                 assert False
         all_targets = list(name_to_target.values())
@@ -71,12 +68,11 @@ def build_target_bundle(directory, username, password, parent_test=None):
     target_names = info.TARGET_WITH_COMPILE_API_LIST
     for build_name in target_names:
         name_base = os.path.normpath(directory + os.sep + build_name)
-        target_hex_path = name_base + '.hex'
-        target_bin_path = name_base + '.bin'
+        target_hex_path = f'{name_base}.hex'
+        target_bin_path = f'{name_base}.bin'
 
         # Build target test image
-        test_info = parent_test.create_subtest('Building target %s' %
-                                               build_name)
+        test_info = parent_test.create_subtest(f'Building target {build_name}')
         if not os.path.isdir(directory):
             os.mkdir(directory)
         # Remove previous build files
@@ -90,9 +86,9 @@ def build_target_bundle(directory, username, password, parent_test=None):
                                         TEST_REPO, build_name,
                                         directory)
         stop = time.time()
-        test_info.info("Build took %s seconds" % (stop - start))
+        test_info.info(f"Build took {stop - start} seconds")
         extension = os.path.splitext(built_file)[1].lower()
-        assert extension == '.hex' or extension == '.bin'
+        assert extension in ['.hex', '.bin']
         if extension == '.hex':
             intel_hex = IntelHex(built_file)
             # Only supporting devices with the starting
@@ -125,12 +121,12 @@ class Target(object):
         self._valid = True
 
     def __str__(self):
-        return "Name=%s" % self.name
+        return f"Name={self.name}"
 
     def set_hex_path(self, path):
         base_name = os.path.basename(path)
         assert self._hex_path is None
-        assert base_name == self._name + '.hex'
+        assert base_name == f'{self._name}.hex'
         path = os.path.abspath(path)
         assert os.path.isfile(path)
         self._hex_path = path
@@ -138,7 +134,7 @@ class Target(object):
     def set_bin_path(self, path):
         base_name = os.path.basename(path)
         assert self._bin_path is None
-        assert base_name == self._name + '.bin'
+        assert base_name == f'{self._name}.bin'
         path = os.path.abspath(path)
         assert os.path.isfile(path)
         self._bin_path = path

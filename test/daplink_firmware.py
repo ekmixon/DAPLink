@@ -35,7 +35,7 @@ def load_bundle_from_project(tool='uvision'):
     Note - This does not build the project.  It only returns the
     firmware that has already been built.
     """
-    assert (tool == 'uvision' or tool == 'mbedcli'), 'Input tool %s is not supported' % (tool) 
+    assert tool in ['uvision', 'mbedcli'], f'Input tool {tool} is not supported' 
 
     self_path = os.path.abspath(__file__)
     test_dir = os.path.dirname(self_path)
@@ -65,10 +65,7 @@ class ReleaseFirmwareBundle(firmware.FirmwareBundle):
                 daplink_firmware = DAPLinkFirmware(name, self, path)
                 if daplink_firmware.valid:
                     firmware_list.append(daplink_firmware)
-            elif os.path.isfile(path):
-                # Parse relevent info
-                pass
-            else:
+            elif not os.path.isfile(path):
                 assert False
         self._firmware_list = firmware_list
 
@@ -90,12 +87,12 @@ class ProjectFirmwareBundle(firmware.FirmwareBundle):
     def __init__(self, project_dir, build_folder):
 
         if not os.path.exists(project_dir):
-            print ("Error: DAPLink project folder %s missing" % project_dir)
+            print(f"Error: DAPLink project folder {project_dir} missing")
             exit(-1)
 
         project_dir_list = os.listdir(project_dir)
         if not project_dir_list:
-            print ("Error: DAPLink projects not build yet at %s" % project_dir)
+            print(f"Error: DAPLink projects not build yet at {project_dir}")
             exit(-1)
 
         firmware_list = []
@@ -134,12 +131,10 @@ class DAPLinkFirmware(firmware.Firmware):
         # Set type
         self._type = None
         string_hic = None
-        match = self._IF_RE.match(name)
-        if match:
+        if match := self._IF_RE.match(name):
             string_hic = match.group(1)
             self._type = self.TYPE.INTERFACE
-        match = self._BL_RE.match(name)
-        if match:
+        if match := self._BL_RE.match(name):
             string_hic = match.group(1)
             self._type = self.TYPE.BOOTLOADER
         if self._type is None:
@@ -147,18 +142,17 @@ class DAPLinkFirmware(firmware.Firmware):
 
         # Set HIC
         assert string_hic in info.HIC_STRING_TO_ID, 'Unknown HIC "%s" must ' \
-            'be added to HIC_STRING_TO_ID in info.py' % string_hic
+                'be added to HIC_STRING_TO_ID in info.py' % string_hic
         self._hic_id = info.HIC_STRING_TO_ID[string_hic]
 
         # Check firmware name and type
-        assert self._type in self.TYPE, "Invalid type %s" % self._type
-        if self._type is self.TYPE.INTERFACE:
-            if name not in info.FIRMWARE_SET:
-                print('Warning: board "%s" no entry in SUPPORTED_CONFIGURATIONS in info.py' % name)
+        assert self._type in self.TYPE, f"Invalid type {self._type}"
+        if self._type is self.TYPE.INTERFACE and name not in info.FIRMWARE_SET:
+            print('Warning: board "%s" no entry in SUPPORTED_CONFIGURATIONS in info.py' % name)
 
         # Set file paths
-        self._bin_path = self._directory + os.sep + '%s_crc.bin' % name
-        self._hex_path = self._directory + os.sep + '%s_crc.hex' % name
+        self._bin_path = self._directory + os.sep + f'{name}_crc.bin'
+        self._hex_path = self._directory + os.sep + f'{name}_crc.hex'
         self._bin_path = os.path.abspath(self._bin_path)
         self._hex_path = os.path.abspath(self._hex_path)
         if not os.path.isfile(self._bin_path):
@@ -169,7 +163,7 @@ class DAPLinkFirmware(firmware.Firmware):
         self._valid = True
 
     def __str__(self):
-        return "Name=%s" % (self.name)
+        return f"Name={self.name}"
 
     @property
     def valid(self):

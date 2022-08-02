@@ -321,68 +321,70 @@ HIC_STRING_TO_ID = {
     'm48ssidae': 0x97969921,
 }
 
-BOARD_ID_LOCKED_WHEN_ERASED = set([
-    0x0231,  # K22F
-    0x0224,  # K28F
-    0x0240,  # K64F
-    0x0214,  # HEXIWEAR
-    0x0228,  # RAPID-IOT
-    0x0311,  # K66F
-    0x0230,  # K20DX
-    0x0200,  # KL25Z
-    0x0205,  # FRDM-KL28Z
-    0x0203,  # TWR-KL28Z72M
-    0x0206,  # TWR-KE18F
-    0x0220,  # KL46Z
-    0x0210,  # KL05Z
-    0x0213,  # FRDM-KE15Z
-    0x0216,  # HVP-KE18F
-    0x0217,  # FRDM-K82F
-    0x0225,  # FRDM-K32W042
-    0x0261,  # FRDM-KL27Z
-    0x0262,  # FRDM-KL43Z
-    0x0218,  # FRDM-KL82Z
-    0x1022,  # RO359B (K24F)
-    0x0201,  # KW41Z
-])
+BOARD_ID_LOCKED_WHEN_ERASED = {
+    0x0231,
+    0x0224,
+    0x0240,
+    0x0214,
+    0x0228,
+    0x0311,
+    0x0230,
+    0x0200,
+    0x0205,
+    0x0203,
+    0x0206,
+    0x0220,
+    0x0210,
+    0x0213,
+    0x0216,
+    0x0217,
+    0x0225,
+    0x0261,
+    0x0262,
+    0x0218,
+    0x1022,
+    0x0201,
+}
 
-BOARD_ID_SUPPORTING_PAGE_ERASE = set([
-    0x0214,  # HEXIWEAR
-    0x0225,  # FRDM-K32W042
-    0x0226,  # MIMXRT1020 EVK
-    0x0227,  # MIMXRT1050 EVK
-    0x0228,  # k20dx_rapid_iot_if
-    0x0235,  # lpc11u35_mini_iot_lpc54018_if
-    0x0236,  # LPCXpresso55S69
-    0x0240,  # K64F
-    0x0311,  # K66F
-    0x0409,  # MAX32630FTHR
-    0x0415,  # MAX32625MBED
-    0x0418,  # MAX32620FTHR
-    0x0419,  # MAX32665HSP
-    0x0450,  # mtb_ublox_odin_w2
-    0x0456,  # lpc11u35_mtb_murata_abz_078_if
-    0x0457,  # lpc11u35_mtb_rak811_if
-    0x0460,  # WISE-1570
-    0x0468,  # lpc11u35_mtb_stm32l475_if
-    0x0469,  # lpc11u35_mtb_stm32f439_if
-    0x1101,  # Nordic-nRF52-DK
-    0x1102,  # Nordic-nRF52840-DK
-    0x1304,  # NuMaker-PFM-M487KM
-    0x1309,  # NuMaker-M252KG
-    0x1310,  # NuMaker-IoT-M263A
-    0x1312,  # NuMaker-M2354
-    0x2410,  # lpc11u35_mbed_cloud_connect_if
-    0x3103,  # dipdap_sdt51822b
-    0x3104,  # dipdap_sdt52832b
-    0x3105,  # dipdap_sdt64b
-    0x3108,  # dipdap_sdt32429b
-    0x3110,  # dipdap_sdt32439b
-    0x3300,  # dipdap_cc3220sf
-    0x4600,  # REALTEK-RTL8195AM
-    0x5500,  # GR-PEACH
-    0x5501,  # GR-LYCHEE
-])
+
+BOARD_ID_SUPPORTING_PAGE_ERASE = {
+    0x0214,
+    0x0225,
+    0x0226,
+    0x0227,
+    0x0228,
+    0x0235,
+    0x0236,
+    0x0240,
+    0x0311,
+    0x0409,
+    0x0415,
+    0x0418,
+    0x0419,
+    0x0450,
+    0x0456,
+    0x0457,
+    0x0460,
+    0x0468,
+    0x0469,
+    0x1101,
+    0x1102,
+    0x1304,
+    0x1309,
+    0x1310,
+    0x1312,
+    0x2410,
+    0x3103,
+    0x3104,
+    0x3105,
+    0x3108,
+    0x3110,
+    0x3300,
+    0x4600,
+    0x5500,
+    0x5501,
+}
+
 
 #Hack until these targets have an image with a valid vector table
 TARGET_WITH_BAD_VECTOR_TABLE_LIST = [
@@ -408,9 +410,11 @@ TARGET_WITH_BAD_VECTOR_TABLE_LIST = [
 
 BOARD_ID_TO_BUILD_TARGET = {config[0]: config[4] for config in
                             SUPPORTED_CONFIGURATIONS}
-FIRMWARE_SET = set((config[2] for config in SUPPORTED_CONFIGURATIONS))
-TARGET_SET = set((target[4] for target in SUPPORTED_CONFIGURATIONS if
-                  target[4] is not None))
+FIRMWARE_SET = {config[2] for config in SUPPORTED_CONFIGURATIONS}
+TARGET_SET = {
+    target[4] for target in SUPPORTED_CONFIGURATIONS if target[4] is not None
+}
+
 
 TARGET_WITH_COMPILE_API_LIST = [config[4] for config in
                                 SUPPORTED_CONFIGURATIONS if

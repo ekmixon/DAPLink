@@ -48,8 +48,7 @@ def main():
             topdict = yaml.load(top_yaml)
             for dict_key in topdict:
                 if dict_key == 'projects':
-                    for project in topdict[dict_key]:
-                        project_list.append(project)
+                    project_list.extend(iter(topdict[dict_key]))
                     break
         except yaml.YAMLError as ex:
             print("Found yaml parse error", ex)
@@ -78,11 +77,11 @@ def main():
         exit(-1)
     version_git_dir = os.path.join(daplink_dir, "source", "daplink")
     generate_version_file(version_git_dir)
-    if not args.projects == []: 
+    if args.projects != []: 
         for project in args.projects:
-            print("Compiling %s" % project)
+            print(f"Compiling {project}")
             (cli_hex_output,crc_file_output) = mbedcli_tools.mbedcli_run(daplink_dir, args.build_folder, project, args.toolchain, args.clean, args.verbosity)
-            print("Creating crc padded binaries %s" % os.path.basename(cli_hex_output))
+            print(f"Creating crc padded binaries {os.path.basename(cli_hex_output)}")
             post_build_script(cli_hex_output, crc_file_output, args.board_id, args.family_id, args.bin_offset)
     else:
         print("compiling all firmware")
@@ -94,9 +93,9 @@ def main():
             else:
                 id_map[firmware] = [(hex(board_id), hex(family_id))]
         for project in project_list:
-            print("Compiling %s" % project)
+            print(f"Compiling {project}")
             (cli_hex_output,crc_file_output) = mbedcli_tools.mbedcli_run(daplink_dir, args.build_folder, project, args.toolchain, args.clean, args.verbosity)
-            print("Creating crc padded binaries %s" % os.path.basename(cli_hex_output))
+            print(f"Creating crc padded binaries {os.path.basename(cli_hex_output)}")
             #can be a legacy build or 0 board_id and family_id
             post_build_script(cli_hex_output, crc_file_output)
             #do a build with board_id and family_id
@@ -113,12 +112,12 @@ def main():
             except yaml.YAMLError as ex:
                 print("Found yaml parse error", ex)
 
-        release_dir = args.release_folder + "_%04i" % release_version 
+        release_dir = args.release_folder + "_%04i" % release_version
         if os.path.exists(release_dir):
-            print("Deleting %s" % release_dir)
+            print(f"Deleting {release_dir}")
             shutil.rmtree(release_dir, ignore_errors=True)
-        print("Releasing directory: " + release_dir)
-        toolchain_dir = args.toolchain+"-CUSTOM_PROFILE"
+        print(f"Releasing directory: {release_dir}")
+        toolchain_dir = f"{args.toolchain}-CUSTOM_PROFILE"
         package_release_files(args.build_folder, release_dir, release_version, toolchain_dir)
 
 main()

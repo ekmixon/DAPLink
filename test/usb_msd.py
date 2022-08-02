@@ -226,7 +226,7 @@ class USBMsd(object):
         # Phase - Status Transport
         csw = self.ep_in.read(13, self.timeout)
         csw_signature, csw_tag, csw_data_residue, csw_status = \
-            struct.unpack(self.FMT_CSW, csw)
+                struct.unpack(self.FMT_CSW, csw)
         assert csw_signature == 0x53425355
         assert csw_tag == transfer_tag
         #TODO - check residue
@@ -260,12 +260,12 @@ class Struct(object):
 
     def __str__(self):
         desc = ""
-        desc += self.name + ":" + os.linesep
+        desc += f"{self.name}:{os.linesep}"
         for field in self.field_list:
             value = self.value_dict[field]
             if isinstance(value, bytes):
                 value = list(bytearray(value))
-            desc += ("    %s=%s" + os.linesep) % (field, value)
+            desc += f"    %s=%s{os.linesep}" % (field, value)
         return desc
 
     def pack(self):

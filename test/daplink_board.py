@@ -43,22 +43,23 @@ FILE_IGNORE_PATTERN_LIST = [
 #   There is no disk in the drive. Please insert a disk into
 #   drive \Device\<Harddiskx>\<rdrive>
 def disable_popup():
-    if sys.platform.startswith("win"):
-        # pylint: disable=invalid-name
-        import ctypes
-        SEM_FAILCRITICALERRORS = 1
-        GetErrorMode = \
-            ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
-        GetErrorMode.restype = ctypes.c_uint
-        GetErrorMode.argtypes = []
-        SetErrorMode = \
-            ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
-        SetErrorMode.restype = ctypes.c_uint
-        SetErrorMode.argtypes = [ctypes.c_uint]
+    if not sys.platform.startswith("win"):
+        return
+    # pylint: disable=invalid-name
+    import ctypes
+    GetErrorMode = \
+        ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
+    GetErrorMode.restype = ctypes.c_uint
+    GetErrorMode.argtypes = []
+    SetErrorMode = \
+        ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
+    SetErrorMode.restype = ctypes.c_uint
+    SetErrorMode.argtypes = [ctypes.c_uint]
 
-        err_mode = GetErrorMode()
-        err_mode |= SEM_FAILCRITICALERRORS
-        SetErrorMode(err_mode)
+    err_mode = GetErrorMode()
+    SEM_FAILCRITICALERRORS = 1
+    err_mode |= SEM_FAILCRITICALERRORS
+    SetErrorMode(err_mode)
 
 disable_popup()
 
@@ -73,7 +74,7 @@ def get_all_attached_daplink_boards():
         if board._mode is not None: #Valid daplink should have set this mode
             all_boards.append(board)
         else:
-            print("Warning: DAPLink tests cannot be done on board %s" % board.unique_id)
+            print(f"Warning: DAPLink tests cannot be done on board {board.unique_id}")
     return all_boards
 
 
@@ -124,7 +125,7 @@ def _parse_kvp_file(file_path, parent_test=None):
         for line in file_handle:
             if len(line) <= 0:
                 if test_info is not None:
-                    test_info.failure("Empty line in %s" % file_path)
+                    test_info.failure(f"Empty line in {file_path}")
                 continue
 
             if line[0] == '#':
@@ -134,17 +135,17 @@ def _parse_kvp_file(file_path, parent_test=None):
             match = line_format.match(line)
             if match is None:
                 if test_info is not None:
-                    test_info.failure("Invalid line: %s" % line)
+                    test_info.failure(f"Invalid line: {line}")
                 continue
 
-            key = match.group(1)
+            key = match[1]
             key = key.lower().replace(" ", "_")
-            value = match.group(2)
+            value = match[2]
             value = value.lower()
             value = value.strip()
             if key in kvp:
                 if test_info is not None:
-                    test_info.failure("Duplicate key %s" % key)
+                    test_info.failure(f"Duplicate key {key}")
                 continue
             kvp[key] = value
     return kvp
@@ -234,7 +235,7 @@ class DaplinkBoard(object):
         self.update_board_info()
 
     def __str__(self):
-        return "Name=%s Unique ID=%s" % (self.name, self.get_unique_id())
+        return f"Name={self.name} Unique ID={self.get_unique_id()}"
 
     def get_unique_id(self):
         return self.unique_id
@@ -248,11 +249,11 @@ class DaplinkBoard(object):
 
     @property
     def name(self):
-        if self.board_id in info.BOARD_ID_TO_BUILD_TARGET:
-            board_target = info.BOARD_ID_TO_BUILD_TARGET[self.board_id]
-        else:
-            board_target = "Unknown"
-        return board_target
+        return (
+            info.BOARD_ID_TO_BUILD_TARGET[self.board_id]
+            if self.board_id in info.BOARD_ID_TO_BUILD_TARGET
+            else "Unknown"
+        )
 
     def get_serial_port(self):
         return self.serial_port
@@ -278,17 +279,16 @@ class DaplinkBoard(object):
             with open(fail_file, 'r') as fail_file_handle:
                 msg = fail_file_handle.read()
                 lines = msg.splitlines()
-                if len(lines) == 2:
-                    if lines[0].startswith('error: '):
-                        error = lines[0][7:]
-                    else:
-                        raise Exception('Can not parse error line in FAIL.TXT')
-                    if lines[1].startswith('type: '):
-                        error_type = lines[1][6:]
-                    else:
-                        raise Exception('Can not parse type line in FAIL.TXT')
-                else:
+                if len(lines) != 2:
                     raise Exception('Wrong number of lines in FAIL.TXT, expected: 2')
+                if lines[0].startswith('error: '):
+                    error = lines[0][7:]
+                else:
+                    raise Exception('Can not parse error line in FAIL.TXT')
+                if lines[1].startswith('type: '):
+                    error_type = lines[1][6:]
+                else:
+                    raise Exception('Can not parse type line in FAIL.TXT')
         return error, error_type
 
     def get_assert_info(self):
@@ -340,7 +340,7 @@ class DaplinkBoard(object):
 
         new_mode = self.get_mode()
         if new_mode != mode:
-            test_info.failure("Board in wrong mode: %s" % new_mode)
+            test_info.failure(f"Board in wrong mode: {new_mode}")
             raise Exception("Could not change board mode")
 
     def set_check_fs_on_remount(self, enabled):
@@ -371,39 +371,40 @@ class DaplinkBoard(object):
 
     def test_fs(self, parent_test):
         """Check if the raw filesystem is valid"""
-        if sys.platform.startswith("win"):
-            test_info = parent_test.create_subtest('test_fs')
-            returncode = _run_chkdsk(self.mount_point)
-            test_info.info('chkdsk returned %s' % returncode)
-            if returncode != 0:
-                test_info.failure('Disk corrupt')
+        if not sys.platform.startswith("win"):
+            return
+        test_info = parent_test.create_subtest('test_fs')
+        returncode = _run_chkdsk(self.mount_point)
+        test_info.info(f'chkdsk returned {returncode}')
+        if returncode != 0:
+            test_info.failure('Disk corrupt')
 
-            # Windows 8/10 workaround - rerun chkdsk until disk caching is on
-            # Notes about this problem:
-            # - This is less likely to occur when the "storage" service is
-            #     turned off and/or you are running as administrator
-            # - When creating a directory with os.mkdir the
-            #     following error occurs: "WindowsError: [Error 1392] The
-            #     file or directory is corrupted and unreadable: '<directory>'"
-            # - When creating a file with open(<filename>, "wb") the
-            #     following error occurs: "OError: [Errno 22] invalid
-            #     mode ('wb') or filename: '<filename>'"
-            # - When a file or directory is created on the drive in explorer
-            #     and you preform a refresh, the newly created file or
-            #     directory disappears
-            persist_test_dir = self.get_file_path("persist_test_dir")
-            for _ in range(10):
-                try:
-                    os.mkdir(persist_test_dir)
-                except EnvironmentError as exception:
-                    test_info.info("cache check exception %s" % exception)
-                if os.path.exists(persist_test_dir):
-                    os.rmdir(persist_test_dir)
-                    break
-                test_info.info("running checkdisk to re-enable caching")
-                _run_chkdsk(self.mount_point)
-            else:
-                raise Exception("Unable to re-enable caching")
+        # Windows 8/10 workaround - rerun chkdsk until disk caching is on
+        # Notes about this problem:
+        # - This is less likely to occur when the "storage" service is
+        #     turned off and/or you are running as administrator
+        # - When creating a directory with os.mkdir the
+        #     following error occurs: "WindowsError: [Error 1392] The
+        #     file or directory is corrupted and unreadable: '<directory>'"
+        # - When creating a file with open(<filename>, "wb") the
+        #     following error occurs: "OError: [Errno 22] invalid
+        #     mode ('wb') or filename: '<filename>'"
+        # - When a file or directory is created on the drive in explorer
+        #     and you preform a refresh, the newly created file or
+        #     directory disappears
+        persist_test_dir = self.get_file_path("persist_test_dir")
+        for _ in range(10):
+            try:
+                os.mkdir(persist_test_dir)
+            except EnvironmentError as exception:
+                test_info.info(f"cache check exception {exception}")
+            if os.path.exists(persist_test_dir):
+                os.rmdir(persist_test_dir)
+                break
+            test_info.info("running checkdisk to re-enable caching")
+            _run_chkdsk(self.mount_point)
+        else:
+            raise Exception("Unable to re-enable caching")
 
         # TODO - as a future improvement add linux and mac support
 
@@ -428,31 +429,24 @@ class DaplinkBoard(object):
         for filename in files:
             filepath = self.get_file_path(filename)
             if not os.path.isfile(filepath):
-                test_info.info("Skipping non file item %s" % filepath)
+                test_info.info(f"Skipping non file item {filepath}")
                 continue
-            skip = False
-            for pattern in FILE_IGNORE_PATTERN_LIST:
-                if pattern.match(filename):
-                    skip = True
-                    break
+            skip = any(pattern.match(filename) for pattern in FILE_IGNORE_PATTERN_LIST)
             if skip:
                 continue
 
             with open(filepath, 'rb') as file_handle:
                 file_contents = file_handle.read()
             if non_ascii_re.search(file_contents):
-                test_info.failure("Non ascii characters in %s" % filepath)
+                test_info.failure(f"Non ascii characters in {filepath}")
             elif non_cr_lf_re.search(file_contents):
-                test_info.failure("File has non-standard line endings %s" %
-                                  filepath)
+                test_info.failure(f"File has non-standard line endings {filepath}")
             elif trail_white_re.search(file_contents):
-                test_info.warning("File trailing whitespace %s" %
-                                  filepath)
+                test_info.warning(f"File trailing whitespace {filepath}")
             elif end_of_file_re.search(file_contents) is None:
-                test_info.warning("No newline at end of file %s" %
-                                  filepath)
+                test_info.warning(f"No newline at end of file {filepath}")
             else:
-                test_info.info("File %s valid" % filepath)
+                test_info.info(f"File {filepath} valid")
 
         self.test_details_txt(test_info)
 
@@ -477,7 +471,7 @@ class DaplinkBoard(object):
         with open(out_file, 'wb') as firmware_file:
             firmware_file.write(data)
         stop = time.time()
-        test_info.info("programming took %s s" % (stop - start))
+        test_info.info(f"programming took {stop - start} s")
         self.wait_for_remount(test_info)
 
         # Check the CRC
@@ -512,7 +506,7 @@ class DaplinkBoard(object):
         with open(out_file, 'wb') as firmware_file:
             firmware_file.write(data)
         stop = time.time()
-        test_info.info("programming took %s s" % (stop - start))
+        test_info.info(f"programming took {stop - start} s")
         self.wait_for_remount(test_info)
 
         # Check the CRC
@@ -549,33 +543,33 @@ class DaplinkBoard(object):
             elapsed += 0.2
         else:
             stop = time.time()
-            test_info.info("unmount took %s s" % (stop - start))
+            test_info.info(f"unmount took {stop - start} s")
         elapsed = 0
         start = time.time()
 
         while not remounted:
-            if self.update_board_info(False):
-                if os.path.isdir(self.mount_point):
-                    # Information returned by mbed-ls could be old.
-                    # Only break from the loop if the second call to
-                    # mbed-ls returns the same mount point.
-                    tmp_mount = self.mount_point
-                    if self.update_board_info(False):
-                        if tmp_mount == self.mount_point:
-                            break
+            if self.update_board_info(False) and os.path.isdir(self.mount_point):
+                # Information returned by mbed-ls could be old.
+                # Only break from the loop if the second call to
+                # mbed-ls returns the same mount point.
+                tmp_mount = self.mount_point
+                if self.update_board_info(False) and tmp_mount == self.mount_point:
+                    break
             if elapsed > wait_time:
                 raise Exception("Mount timed out")
             time.sleep(0.1)
             elapsed += 0.1
         stop = time.time()
-        test_info.info("mount took %s s" % (stop - start))
+        test_info.info(f"mount took {stop - start} s")
 
         if count is not None and self._remount_count is not None:
             expected_count = (0 if mode is not self._mode
                               else (count + 1) & 0xFFFFFFFF)
             if expected_count != self._remount_count:
-                    test_info.failure('Expected remount count of %s got %s' %
-                                      (expected_count, self._remount_count))
+                test_info.failure(
+                    f'Expected remount count of {expected_count} got {self._remount_count}'
+                )
+
 
         # If enabled check the filesystem
         if self._check_fs_on_remount:
@@ -584,8 +578,10 @@ class DaplinkBoard(object):
             self.test_details_txt(parent_test)
             if self._manage_assert:
                 if self._assert is not None:
-                    test_info.failure('Assert on line %s in file %s' %
-                                      (self._assert.line, self._assert.file))
+                    test_info.failure(
+                        f'Assert on line {self._assert.line} in file {self._assert.file}'
+                    )
+
                 self.clear_assert()
 
     def update_board_info(self, exptn_on_fail=True):
@@ -601,8 +597,7 @@ class DaplinkBoard(object):
             endpoints = _get_board_endpoints(self.unique_id)
             if endpoints is None:
                 if exptn_on_fail:
-                    raise Exception("Could not update board info: %s" %
-                                    self.unique_id)
+                    raise Exception(f"Could not update board info: {self.unique_id}")
                 return False
             self.unique_id, self.serial_port, self.mount_point = endpoints
             # Serial port can be missing
@@ -614,7 +609,7 @@ class DaplinkBoard(object):
                 if exptn_on_fail:
                     raise Exception("Mount point is null")
                 return False
-            self.board_id = int(self.unique_id[0:4], 16)
+            self.board_id = int(self.unique_id[:4], 16)
             self._hic_id = int(self.unique_id[-8:], 16)
 
             # Note - Some legacy boards might not have details.txt
@@ -672,16 +667,14 @@ class DaplinkBoard(object):
             return
 
         # Check for required keys
-        for key in required_key_and_format:
+        for key, pattern in required_key_and_format.items():
             if key not in details_txt:
-                test_info.failure("Missing detail.txt entry: %s" % key)
+                test_info.failure(f"Missing detail.txt entry: {key}")
                 continue
 
             value = details_txt[key]
-            pattern = required_key_and_format[key]
             if pattern.match(value) is None:
-                test_info.failure("Bad format detail.txt %s: %s" %
-                                  (key, value))
+                test_info.failure(f"Bad format detail.txt {key}: {value}")
 
         # Check format of optional values
         for key in optional_key_and_format:
@@ -691,8 +684,7 @@ class DaplinkBoard(object):
             value = details_txt[key]
             pattern = optional_key_and_format[key]
             if pattern.match(value) is None:
-                test_info.failure("Bad format detail.txt %s: %s" %
-                                  (key, value))
+                test_info.failure(f"Bad format detail.txt {key}: {value}")
 
         # Check details.txt contents
         details_unique_id = None

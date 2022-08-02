@@ -44,7 +44,7 @@ class TestInfo(object):
         self.infos = 0
         self.name = name
         if init_print:
-            self._print_msg("SubTest: " + name)
+            self._print_msg(f"SubTest: {name}")
 
     def failure(self, msg):
         assert isinstance(msg, six.string_types)
@@ -87,8 +87,7 @@ class TestInfo(object):
             return
 
         # Print test header
-        print(prefix + "Test: %s: %s" % (self.name, result_str),
-              file=log_file)
+        print(prefix + f"Test: {self.name}: {result_str}", file=log_file)
 
         # Check for recursion termination
         if max_recursion is not None and _recursion_level > max_recursion:
@@ -147,16 +146,15 @@ class TestInfo(object):
                 self.failures += failures
                 self.warnings += warnings
                 self.infos += infos
+            elif msg_level == self.FAILURE:
+                self.failures += 1
+            elif msg_level == self.WARNING:
+                self.warnings += 1
+            elif msg_level == self.INFO:
+                self.infos += 1
             else:
-                if msg_level == self.FAILURE:
-                    self.failures += 1
-                elif msg_level == self.WARNING:
-                    self.warnings += 1
-                elif msg_level == self.INFO:
-                    self.infos += 1
-                else:
-                    # Should never get here
-                    assert False
+                # Should never get here
+                assert False
 
     def _add_entry(self, entry_type, msg):
         if entry_type is self.SUBTEST:
@@ -183,7 +181,7 @@ class TestInfoStub(TestInfo):
 
     @staticmethod
     def _print_msg(msg):
-        print(get_timestamp_tag() + "%s"%(msg,))
+        print(get_timestamp_tag() + f"{msg}")
 
 def get_timestamp_tag():
     return "[{:0<17f}] ".format(time.time())

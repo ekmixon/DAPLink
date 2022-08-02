@@ -37,20 +37,20 @@ def mbedcli_run(daplink_dir, build_folder, project, toolchain, clean, verbosity)
     generate_mbedcli_files(os.path.join(daplink_dir, "projects.yaml"), project)
     project_dir=os.path.join(daplink_dir, build_folder, project.upper())
     if clean is True and os.path.exists(project_dir):
-        print("Deleting %s" % project_dir)
+        print(f"Deleting {project_dir}")
         shutil.rmtree(project_dir, ignore_errors=True)
     args = ["mbed", "compile", "-m", project, "-t", toolchain, "--profile", "custom_profile.json"]
     if verbosity is not None:
         args.append("-" + "v" * verbosity)
     call_and_copy_output(args)
     cli_name_out = os.path.basename(daplink_dir)
-    build_dir = os.path.join(project_dir, toolchain+"-CUSTOM_PROFILE")
+    build_dir = os.path.join(project_dir, f"{toolchain}-CUSTOM_PROFILE")
     for file in os.listdir(build_dir):
         if file.startswith(cli_name_out):
             rename_file = os.path.join(build_dir, file.replace(cli_name_out, project, 1))
             if os.path.exists(rename_file):
                 os.remove(rename_file)
             os.rename(os.path.join(build_dir, file), rename_file)
-    cli_hex_output = os.path.join(build_dir, project + ".hex")
-    crc_file_output = os.path.join(build_dir, project + "_crc")
+    cli_hex_output = os.path.join(build_dir, f"{project}.hex")
+    crc_file_output = os.path.join(build_dir, f"{project}_crc")
     return (cli_hex_output,crc_file_output)

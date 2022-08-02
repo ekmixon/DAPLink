@@ -30,15 +30,17 @@ def generate_custom_profile(build_dicts, compiler='ARM', tool_search='make_armcc
     }
     if 'tool_specific' in build_dicts:
         for entry in build_dicts['tool_specific']:
-            if entry == tool_search:
-                if 'misc' in build_dicts['tool_specific'][entry]:
-                    for flags in build_dicts['tool_specific'][entry]['misc']:
-                        if flags.endswith('_flags'):
-                            cli_entry = flags[:-len('_flags')]
-                            if cli_entry in profile_dict[compiler]:
-                                profile_dict[compiler][cli_entry].extend(build_dicts['tool_specific'][entry]['misc'][flags])
-                            else:
-                                profile_dict[compiler][cli_entry] = build_dicts['tool_specific'][entry]['misc'][flags]
+            if (
+                entry == tool_search
+                and 'misc' in build_dicts['tool_specific'][entry]
+            ):
+                for flags in build_dicts['tool_specific'][entry]['misc']:
+                    if flags.endswith('_flags'):
+                        cli_entry = flags[:-len('_flags')]
+                        if cli_entry in profile_dict[compiler]:
+                            profile_dict[compiler][cli_entry].extend(build_dicts['tool_specific'][entry]['misc'][flags])
+                        else:
+                            profile_dict[compiler][cli_entry] = build_dicts['tool_specific'][entry]['misc'][flags]
 
     with open(filename, 'w') as custom_profile:
         json.dump(profile_dict, custom_profile, indent=4, separators=(',', ': '))

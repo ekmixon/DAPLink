@@ -57,7 +57,7 @@ def test_hid(workspace, parent_test):
         FileProgrammer(session).program(binary_file, base_address=addr_bin)
 
         test_info.info("\r\n\r\n------ GET Unique ID ------")
-        test_info.info("Unique ID: %s" % mbed_board.unique_id)
+        test_info.info(f"Unique ID: {mbed_board.unique_id}")
 
         test_info.info("\r\n\r\n------ TEST READ / WRITE CORE REGISTER ------")
         pc = target.read_core_register('pc')
@@ -123,7 +123,7 @@ def test_hid(workspace, parent_test):
         test_info.info("HALT: pc: 0x%X" % currentPC)
         sleep(0.2)
 
-        for i in range(4):
+        for _ in range(4):
             test_info.info("step")
             target.step()
             newPC = target.read_core_register('pc')
@@ -180,7 +180,7 @@ def test_hid(workspace, parent_test):
         sleep(0.1)
         target.halt()
 
-        for i in range(5):
+        for _ in range(5):
             target.step()
             test_info.info("pc: 0x%X" % target.read_core_register('pc'))
 

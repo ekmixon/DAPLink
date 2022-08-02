@@ -65,15 +65,16 @@ def build_repo(user, password, repo, platform, destdir,
             replace.append({dest: srcfile.read()})
 
         payload['replace'] = json.dumps(replace)
-        logging.debug("Payload is: %s" % payload)
+        logging.debug(f"Payload is: {payload}")
 
     auth = (user, password,)
 
     # send task to api
-    logging.debug(api + "/api/v2/tasks/compiler/start/" + "| data: " +
-                  str(payload))
-    r = requests.post(api + "/api/v2/tasks/compiler/start/",
-                      data=payload, auth=auth)
+    logging.debug((f"{api}/api/v2/tasks/compiler/start/| data: " + str(payload)))
+    r = requests.post(
+        f"{api}/api/v2/tasks/compiler/start/", data=payload, auth=auth
+    )
+
 
     logging.debug(r.content)
 
@@ -81,24 +82,21 @@ def build_repo(user, password, repo, platform, destdir,
         raise Exception("Error while talking to the mbed API")
 
     uuid = json.loads(r.content)['result']['data']['task_id']
-    logging.debug("Task accepted and given ID: %s" % uuid)
+    logging.debug(f"Task accepted and given ID: {uuid}")
     success = False
 
     # poll for output
-    for check in range(0, 40):
-        logging.debug("Checking for output: cycle %s of %s" % (check, 10))
+    for check in range(40):
+        logging.debug(f"Checking for output: cycle {check} of 10")
         time.sleep(2)
-        r = requests.get(api + "/api/v2/tasks/compiler/output/%s" %
-                         uuid, auth=auth)
+        r = requests.get((api + f"/api/v2/tasks/compiler/output/{uuid}"), auth=auth)
         logging.debug(r.content)
         response = json.loads(r.content)
         messages = response['result']['data']['new_messages']
         percent = 0
         for message in messages:
-            if message.get('message'):
-                if message.get('type') != 'debug':
-                    logging.info("[%s] %s" % (message['type'],
-                                              message['message']))
+            if message.get('message') and message.get('type') != 'debug':
+                logging.info(f"[{message['type']}] {message['message']}")
             if message.get('action'):
                 if message.get('percent'):
                     percent = message['percent']
@@ -108,30 +106,27 @@ def build_repo(user, password, repo, platform, destdir,
         if response['result']['data']['task_complete']:
             logging.info("Task completed.")
             success = response['result']['data']['compilation_success']
-            logging.info("Compile success: %s" % (success))
+            logging.info(f"Compile success: {success}")
             break
 
-    # now download
-    if success:
-        logging.info("Downloading your binary")
-        params = {
-            'repomode': True,
-            'program': response['result']['data']['program'],
-            'binary': response['result']['data']['binary'],
-            'task_id': uuid
-        }
-        r = requests.get(api + "/api/v2/tasks/compiler/bin/",
-                         params=params, auth=auth)
-        destination = os.path.join(destdir,
-                                   response['result']['data']['binary'])
+    if not success:
+        raise Exception(f"Failed to build platform {platform}")
+    logging.info("Downloading your binary")
+    params = {
+        'repomode': True,
+        'program': response['result']['data']['program'],
+        'binary': response['result']['data']['binary'],
+        'task_id': uuid
+    }
+    r = requests.get(f"{api}/api/v2/tasks/compiler/bin/", params=params, auth=auth)
+    destination = os.path.join(destdir,
+                               response['result']['data']['binary'])
 
-        with open(destination, 'wb') as fd:
-            for chunk in r.iter_content(1024):
-                fd.write(chunk)
+    with open(destination, 'wb') as fd:
+        for chunk in r.iter_content(1024):
+            fd.write(chunk)
 
-        logging.info("Finished!")
-    else:
-        raise Exception("Failed to build platform %s" % platform)
+    logging.info("Finished!")
     return destination
 
 if __name__ == "__main__":

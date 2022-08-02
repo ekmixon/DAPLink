@@ -81,7 +81,7 @@ class PackFlashAlgo(object):
         self.sector_sizes = self.flash_info.sector_info_list
 
         symbols = {}
-        symbols.update(_extract_symbols(self.elf, self.REQUIRED_SYMBOLS))
+        symbols |= _extract_symbols(self.elf, self.REQUIRED_SYMBOLS)
         symbols.update(_extract_symbols(self.elf, self.EXTRA_SYMBOLS,
                                         default=0xFFFFFFFF))
         self.symbols = symbols
@@ -122,15 +122,17 @@ class PackFlashAlgo(object):
         padding = " " * spaces
         if fmt == "hex":
             blob = binascii.b2a_hex(self.algo_data)
-            line_list = []
-            for i in xrange(0, len(blob), group_size):
-                line_list.append('"' + blob[i:i + group_size] + '"')
+            line_list = [
+                '"' + blob[i : i + group_size] + '"'
+                for i in xrange(0, len(blob), group_size)
+            ]
+
             return ("\n" + padding).join(line_list)
         elif fmt == "c":
             blob = self.algo_data[:]
             pad_size = 0 if len(blob) % 4 == 0 else 4 - len(blob) % 4
             blob = blob + b"\x00" * pad_size
-            integer_list = struct.unpack("<" + "L" * int(len(blob) / 4), blob)
+            integer_list = struct.unpack("<" + "L" * (len(blob) // 4), blob)
             line_list = []
             for pos in range(0, len(integer_list), group_size):
                 group = ["0x%08x" % value for value in
@@ -138,7 +140,7 @@ class PackFlashAlgo(object):
                 line_list.append(", ".join(group))
             return (",\n" + padding).join(line_list)
         else:
-            raise Exception("Unsupported format %s" % fmt)
+            raise Exception(f"Unsupported format {fmt}")
 
     def process_template(self, template_path, output_path, data_dict=None):
         """
@@ -177,7 +179,7 @@ def _extract_symbols(simple_elf, symbols, default=None):
             if default is not None:
                 to_ret[symbol] = default
                 continue
-            raise Exception("Missing symbol %s" % symbol)
+            raise Exception(f"Missing symbol {symbol}")
         to_ret[symbol] = simple_elf.symbols[symbol].value
     return to_ret
 
@@ -192,8 +194,10 @@ def _find_sections(elf, name_type_pairs):
             if name_and_type != (section_name, section_type):
                 continue
             if sections[i] is not None:
-                raise Exception("Elf contains duplicate section %s attr %s" %
-                                (section_name, section_type))
+                raise Exception(
+                    f"Elf contains duplicate section {section_name} attr {section_type}"
+                )
+
             sections[i] = section
     return sections
 
@@ -275,8 +279,8 @@ class PackFlashInfo(object):
 
     def __str__(self):
         desc = ""
-        desc += "Flash Device:" + os.linesep
-        desc += "  name=%s" % self.name + os.linesep
+        desc += f"Flash Device:{os.linesep}"
+        desc += f"  name={self.name}" + os.linesep
         desc += "  version=0x%x" % self.version + os.linesep
         desc += "  type=%i" % self.type + os.linesep
         desc += "  start=0x%x" % self.start + os.linesep
@@ -285,7 +289,7 @@ class PackFlashInfo(object):
         desc += "  value_empty=0x%x" % self.value_empty + os.linesep
         desc += "  prog_timeout_ms=%i" % self.prog_timeout_ms + os.linesep
         desc += "  erase_timeout_ms=%i" % self.erase_timeout_ms + os.linesep
-        desc += "  sectors:" + os.linesep
+        desc += f"  sectors:{os.linesep}"
         for sector_start, sector_size in self.sector_info_list:
             desc += ("    start=0x%x, size=0x%x" %
                      (sector_start, sector_size) + os.linesep)

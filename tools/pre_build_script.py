@@ -95,7 +95,7 @@ def generate_version_file(version_git_dir):
     else:
         print("#> Keeping git version file since it didn't need to change")
 
-    print("#> Pre-build script completed written %s" % output_file )
+    print(f"#> Pre-build script completed written {output_file}")
 
     return 0
 

@@ -107,21 +107,15 @@ class TestConfiguration(object):
         self.bl_firmware = None
 
     def __str__(self):
-        name_board = '<None>'
-        name_target = '<None>'
         name_if_firmware = '<None>'
         name_bl_firmware = '<None>'
-        if self.board is not None:
-            name_board = self.board.name
-        if self.target is not None:
-            name_target = self.target.name
+        name_board = self.board.name if self.board is not None else '<None>'
+        name_target = self.target.name if self.target is not None else '<None>'
         if self.if_firmware is not None:
             name_if_firmware = self.if_firmware.name
         if self.bl_firmware is not None:
             name_bl_firmware = self.bl_firmware.name
-        return "APP=%s BL=%s Board=%s Target=%s" % (name_if_firmware,
-                                                    name_bl_firmware,
-                                                    name_board, name_target)
+        return f"APP={name_if_firmware} BL={name_bl_firmware} Board={name_board} Target={name_target}"
 
 
 class TestManager(object):
@@ -218,14 +212,12 @@ class TestManager(object):
             test_info = TestInfo(test_configuration.name)
             test_configuration.test_info = test_info
 
-            test_info.info("Board: %s" % test_configuration.board)
-            test_info.info("Application: %s" %
-                           test_configuration.if_firmware)
-            test_info.info("Bootloader: %s" %
-                           test_configuration.bl_firmware)
-            test_info.info("Target: %s" % test_configuration.target)
+            test_info.info(f"Board: {test_configuration.board}")
+            test_info.info(f"Application: {test_configuration.if_firmware}")
+            test_info.info(f"Bootloader: {test_configuration.bl_firmware}")
+            test_info.info(f"Target: {test_configuration.target}")
 
-            
+
             if self._load_if:
                 if_path = test_configuration.if_firmware.hex_path
                 board.load_interface(if_path, test_info)
@@ -256,9 +248,7 @@ class TestManager(object):
             test_info = test_configuration.test_info
             if info_level == VERB_MINIMAL:
                 test_info.print_msg(TestInfo.FAILURE, 0)
-            elif info_level == VERB_NORMAL:
-                test_info.print_msg(TestInfo.WARNING, None)
-            elif info_level == VERB_VERBOSE:
+            elif info_level in [VERB_NORMAL, VERB_VERBOSE]:
                 test_info.print_msg(TestInfo.WARNING, None)
             elif info_level == VERB_ALL:
                 test_info.print_msg(TestInfo.INFO, None)
@@ -405,7 +395,7 @@ class TestManager(object):
                          bootloader_firmware_list}
 
         # Explicitly specified boards must be present
-        fw_name_set = set(fw.name for fw in filtered_interface_firmware_list)
+        fw_name_set = {fw.name for fw in filtered_interface_firmware_list}
         if self._firmware_filter is not None:
             assert self._firmware_filter == fw_name_set
 
@@ -430,23 +420,22 @@ class TestManager(object):
                 continue
             if target_required and target is None:
                 # Skip configuration
-                test_info.info('No target to test firmware %s' % fw_name)
+                test_info.info(f'No target to test firmware {fw_name}')
                 continue
             if bl_required and bl_firmware is None:
                 # Skip configuration
-                test_info.info('No bootloader to test firmware %s' % fw_name)
+                test_info.info(f'No bootloader to test firmware {fw_name}')
                 continue
             # Check if there is a board to test this firmware
             # and if not skip it
             if board_id not in board_id_to_board_list:
-                test_info.info('No board to test firmware %s' % fw_name)
+                test_info.info(f'No board to test firmware {fw_name}')
                 continue
 
             # Create a test configuration for each board
             board_list = board_id_to_board_list[board_id]
             for board in board_list:
-                test_conf = TestConfiguration(if_firmware.name + ' ' +
-                                              board.name)
+                test_conf = TestConfiguration((f'{if_firmware.name} ' + board.name))
                 test_conf.if_firmware = if_firmware
                 test_conf.bl_firmware = bl_firmware
                 test_conf.board = board
@@ -583,7 +572,7 @@ def main():
             print("  images can be built with the RESTful Compile API.")
             print("NOTE: you can skip the endpoint tests altogether ")
             print("with --notestendpt")
-            
+
             exit(-1)
 
         if args.targetdir is not None:
@@ -614,21 +603,21 @@ def main():
 
     for board in all_boards:
         if board.get_mode() == board.MODE_BL:
-            print('Switching to APP mode on board: %s' % board.unique_id)
+            print(f'Switching to APP mode on board: {board.unique_id}')
             try:
                 board.set_mode(board.MODE_IF)
             except Exception:
-                print('Unable to switch mode on board: %s' % board.unique_id)
+                print(f'Unable to switch mode on board: {board.unique_id}')
 
     # Make sure firmware is present
     firmware_explicitly_specified = len(args.firmware) != 0
     if firmware_explicitly_specified:
-        all_firmware_names = set(fw.name for fw in all_firmware)
+        all_firmware_names = {fw.name for fw in all_firmware}
         firmware_missing = False
         for firmware_name in args.firmware:
             if firmware_name not in all_firmware_names:
                 firmware_missing = True
-                test_info.failure('Cannot find firmware %s' % firmware_name)
+                test_info.failure(f'Cannot find firmware {firmware_name}')
         if firmware_missing:
             test_info.failure('Firmware missing - aborting test')
             exit(-1)
@@ -658,10 +647,8 @@ def main():
         exit(-1)
     else:
         test_info.info('Test configurations to be run:')
-        index = 0
-        for test_config in test_config_list:
+        for index, test_config in enumerate(test_config_list):
             test_info.info('    %i: %s' % (index, test_config))
-            index += 1
     test_info.info('')
 
     untested_list = tester.get_untested_firmware()
@@ -670,7 +657,7 @@ def main():
     else:
         test_info.info('Fimrware that will not be tested:')
         for untested_firmware in untested_list:
-            test_info.info('    %s' % untested_firmware.name)
+            test_info.info(f'    {untested_firmware.name}')
     test_info.info('')
 
     if firmware_explicitly_specified and len(untested_list) != 0:
@@ -693,7 +680,7 @@ def main():
     # Warn about untested boards
     print('')
     for firmware in tester.get_untested_firmware():
-        print('Warning - configuration %s is untested' % firmware.name)
+        print(f'Warning - configuration {firmware.name} is untested')
 
     if tester.all_tests_pass:
         print("All boards passed")
